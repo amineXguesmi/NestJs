@@ -1,11 +1,12 @@
 /* eslint-disable prettier/prettier */
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PremierModule } from './Premier/premier/premier.module';
 import { TodoModule } from './Todo/todo/todo.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import TodoEntity from './entities/Todo';
+import { AuthMiddlewareMiddleware } from './auth.middleware/auth.middleware.middleware';
 
 @Module({
   imports: [
@@ -25,4 +26,22 @@ import TodoEntity from './entities/Todo';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): MiddlewareConsumer | void {
+    consumer.apply(AuthMiddlewareMiddleware).forRoutes(
+      'todo',
+      {
+        path: 'UpdateToBd*',
+        method: RequestMethod.POST,
+      },
+      {
+        path: 'UpdateToBd*',
+        method: RequestMethod.POST,
+      },
+      {
+        path: 'deleteBd*',
+        method: RequestMethod.DELETE,
+      },
+    );
+  }
+}

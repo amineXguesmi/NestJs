@@ -2,7 +2,7 @@
 /* eslint-disable prettier/prettier */
 import CreateTodoDTO  from 'src/DTO/Create-todo-DTO';
 import UpdateTodoDTO from 'src/DTO/Update-todo-DTO';
-import { HttpException, Injectable } from '@nestjs/common';
+import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { TodoStatusEnum } from 'src/spec-class/todo';
 import Todo from 'src/spec-class/todo';
@@ -63,6 +63,10 @@ export class TodoService {
         return todoToCreate;
     }
     async updateTodoByIdToDb(id: string, updateTodoDTO: UpdateTodoDTO) {
+        const result = await this.todoRepository.findOne({ where: { id } });
+        if (result == undefined) {
+            return new NotFoundException();
+        }
         let updates = {};
         if (updateTodoDTO.name !== null) {
             updates = { name: updateTodoDTO.name, ...updates };
@@ -77,26 +81,28 @@ export class TodoService {
         return updates;
     }
     async  deleteTodoBd(id: string) {
+        const result = await this.todoRepository.findOne({ where: { id } });
+        if (result == undefined) {
+            return new NotFoundException();
+        }
         const todoToDelete = await this.todoRepository.delete(id);
         return todoToDelete;
     }
     //soft delete 
     async SoftdeleteTodoBd(id: string) {
-        const todo = await this.todoRepository.find();
-        const todoToDelete = todo.find(Element => Element.id==id);
-        if(todoToDelete){
-            todoToDelete.deletedAt=new Date();
-            await this.todoRepository.save(todoToDelete);
+        const result = await this.todoRepository.findOne({ where: { id } });
+        if (result == undefined) {
+            return new NotFoundException();
         }
+        return await this.todoRepository.softDelete(id);
         
     }
     async RestoreTodoBd(id:string){
-        const todo = await this.todoRepository.find( {withDeleted: true });
-        const todoToRestore = todo.find(Element => Element.id == id);
-        if (todoToRestore) {
-            todoToRestore.deletedAt = null;
-            await this.todoRepository.save(todoToRestore);
+        const result = await this.todoRepository.findOne({ where: { id } });
+        if (result == undefined) {
+            return new NotFoundException();
         }
+        return await this.todoRepository.restore(id);
     }
     async NTodosPerStatus() {
         return {
@@ -112,7 +118,32 @@ export class TodoService {
         };
     }
 
-    async todosEndpoint(filterDTO: FindTodoFilterDTO) {
+    async todosEndpointOr(filterDTO: FindTodoFilterDTO) {
+        const todo = await this.todoRepository.find({ withDeleted: true });
+        console.log(todo);
+        let where: any = {};
+        if(filterDTO.status!=null){
+            where.status=filterDTO.status
+        }
+        if (filterDTO.description !== null) {
+            where = [
+                { description: Like(`%${filterDTO.description}%`) },
+                { name: Like(`%${filterDTO.description}%`) },
+                where
+            ];
+        }
+        let options: FindManyOptions = {
+            where,
+            withDeleted: true,
+        };
+        if (filterDTO.page && filterDTO.take) {
+            options.take = filterDTO.take;
+            options.skip = filterDTO.take * (filterDTO.page - 1);
+        }
+        console.log(options);
+        return await this.todoRepository.find(options);
+    }
+    async todosEndpointAnd(filterDTO: FindTodoFilterDTO) {
         const todo = await this.todoRepository.find({ withDeleted: true });
         console.log(todo);
         let where: any = {};

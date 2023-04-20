@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Controller,Get, Post,Delete,Put, Param, Body, Version, Query } from '@nestjs/common';
+import { Controller,Get, Post,Delete,Put, Param, Body, Version, Query, Req } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import CreateTodoDTO from 'src/DTO/Create-todo-DTO';
 import Todo, { TodoStatusEnum } from 'src/spec-class/todo';
@@ -7,13 +7,15 @@ import { TodoService } from '../todo.service'
 import UpdateTodoDTO from 'src/DTO/Update-todo-DTO';
 import TodoEntity from 'src/entities/Todo';
 import FindTodoFilterDTO from 'src/DTO/Find-todo-DTO';
+import { AuthMiddlewareMiddleware } from 'src/auth.middleware/auth.middleware.middleware';
 
 @Controller('todo')
 export class TodoController {
     constructor(private TodoService: TodoService) { }
     //CRUD for Array todos
+    
     @Get("all")
-    GetTodos(){
+    GetTodos(@Req() req: any){
         return this.TodoService.findall();
     }
     @Get('find/:id')
@@ -62,16 +64,23 @@ export class TodoController {
     async CountTodo(){
         return  this.TodoService.NTodosPerStatus();
     }
-    @Get("endpoint")
-    async todosEndpoint(@Query() filterDTO: FindTodoFilterDTO) {
+    @Get("endpointOr")
+    async todosEndpointOr(@Query() filterDTO: FindTodoFilterDTO) {
         console.log(filterDTO);
-        return await this.TodoService.todosEndpoint(filterDTO);
+        return await this.TodoService.todosEndpointOr(filterDTO);
     }
+
+    @Get("endpointAnd")
+    async todosEndpointAnd(@Query() filterDTO: FindTodoFilterDTO) {
+        console.log(filterDTO);
+        return await this.TodoService.todosEndpointAnd(filterDTO);
+    }
+
     @Get('endpoint/:id')
     async todoEndpointById(@Param('id') id: string) {
         return await this.TodoService.todoEndpointById(id);
     }
-
+    
 }
 
 
